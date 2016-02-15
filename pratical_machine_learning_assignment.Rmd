@@ -1,0 +1,72 @@
+---
+title: "Practical Machine Learning Assignment"
+output: html_document
+---
+
+###Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+###Data
+
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+###preparing data set
+download the training and testing data set from online
+
+```{r}
+setwd("~/downloads")
+training<-read.csv("pml-training.csv", header=T, na.strings=c("NA", "#DIV/0!"))
+testing<-read.csv("pml-testing.csv", header=T, na.string=c("NA", "#DIV/0!"))
+```
+
+### cleaning the data
+1. exclude all the data that contains NA in the training data
+```{r}
+noNATrain<-training[, apply(training, 2, function(x) !any(is.na(x)))] 
+dim(noNATrain)
+
+cleanTrain<-noNATrain[,-c(1:8)]
+dim(cleanTrain)
+```
+2.  exclude all the data that contains NA in the testing data
+```{r}
+
+cleantest<-testing[,names(cleanTrain[,-52])]
+dim(cleantest)
+```
+
+###partitioning the data
+partition the data into 75% training set and 25% testing set
+```{r}
+library(caret)
+inTrain<-createDataPartition(y=cleanTrain$classe, p=0.75,list=F)
+training<-cleanTrain[inTrain,] 
+test<-cleanTrain[-inTrain,] 
+
+```
+
+###performing random forest trees
+using cross-validation to generate Random forest trees for the training dataset. Afterwards, the generated algorithm was evaluated under the partitioned training set to evaluate the accuracy and estimated error of prediction. We use 51 predictors for five classes using cross-validation at a 5-fold. the result has an accuracy of 99%.
+```{r}
+library(caret)
+set.seed(13333)
+MLcontrol<-trainControl(method="cv", number=5, allowParallel=T, verbose=T)
+rfmodel<-train(classe~.,data=training, method="rf", trControl=MLcontrol, verbose=F)
+predrf<-predict(rfmodel, newdata=test)
+confusionMatrix(predrf, test$classe)
+```
+
+###predicting 20 test cases
+```{r}
+predtest<-predict(rfmodel, newdata=cleantest)
+predtest
+```
+
+
